@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#FAF8F4" />
+  <title>ورق — دفتر اليوميات والوعي بالوقت</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: IBM Plex Sans Arabic & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* ==========================================================================
+       JOSEF MÜLLER-BROCKMANN "GRID SYSTEMS" + GOLDEN RATIO (φ = 1.618)
+       - Strict Baseline Rhythm: 1 Line (1L) = 44px (iOS Optimal Touch Target)
+       - Every single element height & vertical space is an exact integer multiple of 44px:
+         1L = 44px | 2L = 88px | 3L = 132px
+       - Ruled line opacity reduced by 70% (0.085 light / 0.03 dark)
+       - Strict 3-size typographic scale:
+         Body/Input = 16px | Section Title = 14px | Meta/Tags = 12px
+       ========================================================================== */
+    :root {
+      --L: 44px;
+      --margin-col: 56px;
+      --bg-desk: #E8E4DC;
+      --bg-paper: #FAF8F4;
+      --line-rule: rgba(130, 118, 100, 0.085);
+      --margin-rule: rgba(210, 105, 75, 0.26);
+      --ink: #1C1B19;
+      --ink-secondary: #5C5852;
+      --ink-muted: #9C968E;
+      --accent-pos: #2B6CB0;
+      --accent-neg: #B84A39;
+    }
+
+    html.dark {
+      --bg-desk: #0B0B0C;
+      --bg-paper: #141416;
+      --line-rule: rgba(255, 255, 255, 0.03);
+      --margin-rule: rgba(210, 105, 75, 0.22);
+      --ink: #EDEDEF;
+      --ink-secondary: #A0A0AB;
+      --ink-muted: #63636E;
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-desk);
+      color: var(--ink);
+      font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100dvh;
+    }
+
+    /* The Physical Lined Paper Sheet */
+    .paper-sheet {
+      width: 100%;
+      max-width: 760px;
+      min-height: 100dvh;
+      margin: 0 auto;
+      background-color: var(--bg-paper);
+      /* Horizontal Ruled Lines every 44px, drawn at the bottom pixel (43px..44px) */
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 43px,
+        var(--line-rule) 43px,
+        var(--line-rule) 44px
+      );
+      background-size: 100% 44px;
+      background-position: 0 0;
+      position: relative;
+      padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }
+
+    @media (min-width: 768px) {
+      .paper-sheet {
+        margin: 44px auto 132px auto;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.07);
+      }
+      html.dark .paper-sheet {
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+      }
+    }
+
+    /* Vertical Margin Line (Right in RTL, Left in LTR) */
+    .vertical-margin-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background-color: var(--margin-rule);
+      pointer-events: none;
+      z-index: 10;
+    }
+    html[dir="rtl"] .vertical-margin-line { right: var(--margin-col); }
+    html[dir="ltr"] .vertical-margin-line { left: var(--margin-col); }
+
+    /* ==========================================================================
+       STRICT BASELINE GRID ROWS (Guaranteed 0px drift from background lines)
+       Every row has a Margin Cell (56px) + Content Cell (flex-1)
+       ========================================================================== */
+    .n-row {
+      height: 44px;
+      min-height: 44px;
+      max-height: 44px;
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .n-row-2 {
+      height: 88px;
+      min-height: 88px;
+      max-height: 88px;
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    /* Spatial Contrast Spacers (Measured in exact Ruled Lines) */
+    .space-1L { height: 44px; width: 100%; }
+    .space-2L { height: 88px; width: 100%; }
+
+    /* Margin Cell (inside the 56px margin gutter) */
+    .m-cell {
+      width: var(--margin-col);
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--ink-muted);
+      user-select: none;
+    }
+
+    /* Content Cell (Main writing area past the vertical margin line) */
+    .c-cell {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      padding-inline-start: 20px;
+      padding-inline-end: 20px;
+    }
+
+    @media (min-width: 640px) {
+      .c-cell {
+        padding-inline-start: 28px;
+        padding-inline-end: 36px;
+      }
+    }
+
+    /* Golden Ratio 2-Column Split inside Content Cell (61.8% / 38.2%) */
+    .phi-grid {
+      display: grid;
+      grid-template-columns: 1.618fr 1fr;
+      width: 100%;
+      align-items: end;
+      gap: 16px;
+    }
+
+    /* Typography locked to baseline */
+    .text-body {
+      font-size: 16px;
+      line-height: 28px;
+      color: var(--ink);
+    }
+
+    .text-section {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 28px;
+      color: var(--ink-secondary);
+      letter-spacing: 0.01em;
+    }
+
+    .text-meta {
+      font-size: 12px;
+      line-height: 28px;
+      color: var(--ink-muted);
+    }
+
+    /* Inputs sitting directly on the ruled line */
+    .ruled-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      line-height: 28px;
+      color: var(--ink);
+      padding: 0;
+      margin: 0;
+      font-family: inherit;
+    }
+    .ruled-input::placeholder {
+      color: var(--ink-muted);
+    }
+
+    /* Low-Contrast Typographic Category / Mode Selectors (No loud boxes) */
+    .quiet-choice {
+      font-size: 12px;
+      line-height: 28px;
+      color: var(--ink-muted);
+      padding: 0 6px;
+      transition: color 0.15s ease;
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      height: 36px;
+      display: inline-flex;
+      align-items: flex-end;
+    }
+    .quiet-choice:hover {
+      color: var(--ink-secondary);
+    }
+    .quiet-choice.active {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .quiet-choice.active::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 6px;
+      right: 6px;
+      height: 1.5px;
+      background-color: var(--ink);
+    }
+
+    /* Primary Entry Type Switcher (+ إيجابي / × سلبي / ~ فكرة) */
+    .type-switch {
+      font-size: 14px;
+      line-height: 28px;
+      color: var(--ink-muted);
+      padding: 0 10px;
+      height: 36px;
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 4px;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.15s ease;
+    }
+    .type-switch.active {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .type-switch.active::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--ink);
+    }
+
+    /* Easy 44x44px Touch Button */
+    .tap-btn {
+      min-width: 44px;
+      height: 36px;
+      display: inline-flex;
+      align-items: flex-end;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--ink-secondary);
+      transition: opacity 0.15s ease;
+    }
+    .tap-btn:hover {
+      color: var(--ink);
+    }
+
+    svg.lucide {
+      stroke-width: 1.6px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- THE RULED NOTEBOOK SHEET -->
+  <div class="paper-sheet">
+    <!-- Vertical Margin Line -->
+    <div class="vertical-margin-line"></div>
+
+    <!-- ======================================================================
+         1. TOP BAR (سطر واحد هادئ: فقط الستريك + التاريخ + الثلاث نقاط ⋮)
+         ====================================================================== -->
+    <header class="sticky top-0 z-30 bg-[#FAF8F4]/95 dark:bg-[#141416]/95 backdrop-blur-xs">
+      <!-- Line 1: Streak in Margin + Date + 3-Dots Menu -->
+      <div class="n-row">
+        <!-- Margin Cell: Streak Only -->
+        <div class="m-cell" title="أيام الاستمرارية">
+          <span class="flex items-center gap-0.5 font-semibold text-stone-700 dark:text-zinc-200">
+            <span class="text-[#D2694B]">🔥</span>
+            <span id="streakCount">0</span>
+          </span>
+        </div>
+
+        <!-- Content Cell: Date Navigation & 3-Dots Button -->
+        <div class="c-cell">
+          <div class="flex items-center gap-2">
+            <button onclick="shiftSelectedDate(-1)" class="tap-btn !min-w-[32px]" title="اليوم السابق">
+              <i data-lucide="chevron-right" class="w-4 h-4 rtl:rotate-0 ltr:rotate-180 mb-1"></i>
+            </button>
+            <span class="text-body font-semibold" id="currentDateDisplay">السبت، 31 أكتوبر</span>
+            <button onclick="shiftSelectedDate(1)" class="tap-btn !min-w-[32px]" title="اليوم التالي">
+              <i data-lucide="chevron-left" class="w-4 h-4 rtl:rotate-0 ltr:rotate-180 mb-1"></i>
+            </button>
+            <button onclick="jumpToToday()" id="todayJumpBtn" class="hidden text-meta underline px-2">
+              العودة لليوم
+            </button>
+          </div>
+
+          <!-- 3-Dots Menu Trigger -->
+          <button onclick="openModal('menuModal')" class="tap-btn" title="القائمة والإعدادات" aria-label="القائمة">
+            <i data-lucide="more-horizontal" class="w-5 h-5 mb-1"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Line 2: Quiet Time Awareness Bar sitting directly on the 2nd Ruled Line -->
+      <div class="n-row relative">
+        <div class="m-cell">
+          <span id="wakingPercentText" class="text-[11px]">65%</span>
+        </div>
+        <div class="c-cell">
+          <span class="text-meta" id="wakingHoursText">باقي من يومك 6 ساعات و 15 دقيقة</span>
+          <span class="text-meta font-mono" id="dayOfYearBadge">يوم 304 / 365</span>
+        </div>
+        <!-- Subtle 1.5px Progress Line sitting exactly on the 88px ruled line -->
+        <div class="absolute bottom-0 left-0 right-0 h-[1.5px] bg-transparent overflow-hidden">
+          <div id="wakingProgressBar" class="h-full bg-stone-800/40 dark:bg-zinc-300/40 transition-all duration-500" style="width: 65%"></div>
+        </div>
+      </div>
+    </header>
+
+
+    <!-- ======================================================================
+         2. MAIN NOTEBOOK CONTENT (44px Strict Baseline Grid)
+         ====================================================================== -->
+    <main>
+
+      <!-- ====================================================================
+           TAB 1: دفتر اليوم (TODAY — البوكس الرئيسي + السجل المخطط + التقييم)
+           ==================================================================== -->
+      <section id="tab-today" class="tab-panel">
+
+        <!-- 1 Blank Ruled Line for breathing room after Header -->
+        <div class="space-1L"></div>
+
+        <!-- ==================================================================
+             بوكس التدوين الرئيسي (THE MAIN WRITING ZONE ON THE RULED LINES)
+             3 Ruled Lines (132px total) — Everything sits 100% on the lines
+             ================================================================== -->
+        <form onsubmit="handleUnifiedSubmit(event)">
+          
+          <!-- Writing Box Line 1: Choose Positive (+) or Negative (×) + Subtle Categories -->
+          <div class="n-row">
+            <div class="m-cell">
+              <i data-lucide="pen-line" class="w-3.5 h-3.5 mb-1"></i>
+            </div>
+            <div class="c-cell overflow-x-auto no-scrollbar gap-4">
+              <!-- Positive vs Negative vs Thought Switcher -->
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="setEntryType('positive')" id="typeBtn-positive" class="type-switch active">
+                  <span>+</span>
+                  <span data-i18n="typePositive">إيجابي</span>
+                </button>
+                <button type="button" onclick="setEntryType('negative')" id="typeBtn-negative" class="type-switch">
+                  <span>×</span>
+                  <span data-i18n="typeNegative">سلبي</span>
+                </button>
+                <button type="button" onclick="setEntryType('thought')" id="typeBtn-thought" class="type-switch">
+                  <span>~</span>
+                  <span data-i18n="typeThought">فكرة</span>
+                </button>
+              </div>
+
+              <!-- Subtle Low-Contrast Categories on the same ruled line -->
+              <div class="flex items-center gap-1 shrink-0" id="dynamicTagsContainer"></div>
+            </div>
+          </div>
+
+          <!-- Writing Box Line 2: The Main Ruled Input Line + Submit Action -->
+          <div class="n-row">
+            <div class="m-cell">
+              <span id="activePromptSymbol" class="text-body font-bold text-stone-800 dark:text-zinc-100">+</span>
+            </div>
+            <div class="c-cell gap-3">
+              <input
+                type="text"
+                id="unifiedTextInput"
+                class="ruled-input"
+                data-i18n-placeholder="mainInputPlaceholder"
+                placeholder="اكتب ما حدث معك اليوم على السطر..."
+                autocomplete="off"
+                required
+              />
+              <button type="submit" class="tap-btn shrink-0 font-semibold text-section px-2" data-i18n="saveEntryBtn">
+                تدوين ↵
+              </button>
+            </div>
+          </div>
+
+          <!-- Writing Box Line 3: Optional Lesson Line (Shown when Negative '×' is selected) -->
+          <div id="negativeLessonRow" class="n-row hidden">
+            <div class="m-cell">
+              <span>↳</span>
+            </div>
+            <div class="c-cell">
+              <input
+                type="text"
+                id="unifiedLessonInput"
+                class="ruled-input !text-[14px] text-stone-600 dark:text-zinc-400"
+                data-i18n-placeholder="lessonPlaceholder"
+                placeholder="ما الدرس المستفاد أو الحل كي لا يتكرر غداً؟ (اختياري)..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+        </form>
+
+
+        <!-- GOLDEN RATIO SPATIAL CONTRAST: 2 Full Blank Ruled Lines (88px) -->
+        <div class="space-2L"></div>
+
+
+        <!-- ==================================================================
+             سجل اليوم (TODAY'S JOURNAL ENTRIES ON THE RULED LINES)
+             ================================================================== -->
+        <!-- Section Header Row -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span id="streamTotalCount">0</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="streamTitle">مدونات اليوم</h2>
+            <!-- Quiet Filter Links -->
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="setStreamFilter('all')" data-filter="all" class="quiet-choice active" data-i18n="filterAll">الكل</button>
+              <button type="button" onclick="setStreamFilter('positive')" data-filter="positive" class="quiet-choice" data-i18n="filterPos">+ إيجابي</button>
+              <button type="button" onclick="setStreamFilter('negative')" data-filter="negative" class="quiet-choice" data-i18n="filterNeg">× سلبي</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entries Stream (Every item is strictly 1 or 2 n-rows) -->
+        <div id="journalEntriesStream"></div>
+
+
+        <!-- GOLDEN RATIO SPATIAL CONTRAST: 2 Full Blank Ruled Lines (88px) -->
+        <div class="space-2L"></div>
+
+
+        <!-- ==================================================================
+             تقييم اليوم وإيقاعه (END OF DAY RATING & PACE ON THE LINES)
+             ================================================================== -->
+        <!-- Rating Header & Score Row -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span class="font-bold text-stone-800 dark:text-zinc-200" id="ratingMarginBadge">8/10</span>
+          </div>
+          <div class="c-cell">
+            <span class="text-section" data-i18n="evalTitle">تقييم اليوم من 10</span>
+            <!-- 1 to 10 Direct Tap Numbers sitting cleanly on the line -->
+            <div class="flex items-center gap-0.5 sm:gap-1.5 font-mono" id="ratingNumbersRow"></div>
+          </div>
+        </div>
+
+        <!-- Day Pace Row -->
+        <div class="n-row">
+          <div class="m-cell">
+            <i data-lucide="gauge" class="w-3.5 h-3.5 mb-1"></i>
+          </div>
+          <div class="c-cell">
+            <span class="text-section" data-i18n="timeFeelLabel">كيف مرّ وقتك اليوم؟</span>
+            <div class="flex items-center gap-2" id="velocityButtons">
+              <button type="button" onclick="setTimeVelocity(1)" data-vel="1" class="quiet-choice" data-i18n="paceSlow">هادئ وواعٍ</button>
+              <button type="button" onclick="setTimeVelocity(2)" data-vel="2" class="quiet-choice" data-i18n="paceBalanced">متزن</button>
+              <button type="button" onclick="setTimeVelocity(3)" data-vel="3" class="quiet-choice" data-i18n="paceFast">سريع ومشتت</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ====================================================================
+           TAB 2: مهام الغد واليوم (TOMORROW & TODAY PRIORITIES)
+           ==================================================================== -->
+      <section id="tab-tomorrow" class="tab-panel hidden">
+
+        <div class="space-1L"></div>
+
+        <!-- Unified Task Input Box (Add to Tomorrow or Today) -->
+        <form onsubmit="handleAddTask(event)">
+          <div class="n-row">
+            <div class="m-cell">
+              <i data-lucide="list-plus" class="w-3.5 h-3.5 mb-1"></i>
+            </div>
+            <div class="c-cell">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="setTaskTarget('tomorrow')" id="taskTarget-tomorrow" class="type-switch active" data-i18n="targetTomorrow">مهمة للغد</button>
+                <button type="button" onclick="setTaskTarget('today')" id="taskTarget-today" class="type-switch" data-i18n="targetToday">مهمة لليوم</button>
+              </div>
+              <span class="text-meta" data-i18n="max6Hint">بحد أقصى 6 أولويات للتركيز</span>
+            </div>
+          </div>
+
+          <div class="n-row">
+            <div class="m-cell">
+              <span>•</span>
+            </div>
+            <div class="c-cell gap-3">
+              <input
+                type="text"
+                id="unifiedTaskInput"
+                class="ruled-input"
+                data-i18n-placeholder="taskInputPlaceholder"
+                placeholder="اكتب المهمة ذات الأولوية..."
+                autocomplete="off"
+                required
+              />
+              <button type="submit" class="tap-btn shrink-0 font-semibold text-section px-2" data-i18n="addTaskBtn">
+                إضافة ↵
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div class="space-2L"></div>
+
+        <!-- Tomorrow's 6 Priorities -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span id="tomorrowCountStamp">0/6</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="tomorrowPlanTitle">أولويات الغد (مرتبة حسب الأهمية)</h2>
+          </div>
+        </div>
+
+        <div id="tomorrowTasksList"></div>
+
+        <div class="space-2L"></div>
+
+        <!-- Today's Priorities & Quick Migration -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span id="todayTasksCount">0/6</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="todayTasksTitle">مهام اليوم (أنجزها أو رحّلها للغد)</h2>
+          </div>
+        </div>
+
+        <div id="todayTasksList"></div>
+
+      </section>
+
+
+      <!-- ====================================================================
+           TAB 3: الوعي بالوقت (TIME AWARENESS — اليوم والسنة)
+           ==================================================================== -->
+      <section id="tab-pulse" class="tab-panel hidden">
+
+        <div class="space-1L"></div>
+
+        <!-- 1. Waking Day Hours Breakdown -->
+        <div class="n-row">
+          <div class="m-cell">
+            <i data-lucide="sun" class="w-3.5 h-3.5 mb-1"></i>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="wakingWindowTitle">ساعات يقظتك اليوم</h2>
+            <div class="flex items-center gap-2 text-meta font-mono">
+              <input type="time" id="wakeTimeInput" value="07:00" onchange="updateWakeSleepConfig()" class="bg-transparent border-b border-stone-300 dark:border-zinc-700 outline-none" />
+              <span>→</span>
+              <input type="time" id="sleepTimeInput" value="23:00" onchange="updateWakeSleepConfig()" class="bg-transparent border-b border-stone-300 dark:border-zinc-700 outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Hourly Visual Row on the Lined Grid -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span id="pulseElapsedPct">0%</span>
+          </div>
+          <div class="c-cell">
+            <div id="wakingHoursBarRow" class="w-full flex items-center gap-1 h-3 mb-1"></div>
+          </div>
+        </div>
+
+        <div class="n-row">
+          <div class="m-cell"></div>
+          <div class="c-cell">
+            <span id="pulseTimeSummary" class="text-body"></span>
+          </div>
+        </div>
+
+        <div class="space-2L"></div>
+
+        <!-- 2. Year Awareness (365 Days) -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span>365</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="yearMatrixTitle">أيام سنتك الحالية</h2>
+            <span id="yearRemainingStats" class="text-meta font-mono"></span>
+          </div>
+        </div>
+
+        <!-- 365 Dots Aligned in a 4-Line Block (176px = 4 * 44px) -->
+        <div class=" flex w-full" style="height: 176px;">
+          <div class="m-cell !items-start pt-3"></div>
+          <div class="c-cell !items-center">
+            <div id="yearDotMatrix" class="grid grid-cols-[repeat(31,minmax(0,1fr))] gap-1.5 w-full"></div>
+          </div>
+        </div>
+
+        <div class="space-2L"></div>
+
+        <!-- 3. Subjective Time Perception Summary -->
+        <div class="n-row">
+          <div class="m-cell">
+            <i data-lucide="activity" class="w-3.5 h-3.5 mb-1"></i>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="stdiTitle">إدراكك لسرعة الوقت</h2>
+            <span id="stdiScoreBadge" class="text-meta font-mono"></span>
+          </div>
+        </div>
+
+        <div class="n-row">
+          <div class="m-cell"></div>
+          <div class="c-cell">
+            <p id="stdiNarrative" class="text-body truncate"></p>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ====================================================================
+           TAB 4: الخلاصة والتحليل (SUMMARY — الإيجابيات والسلبيات والدروس)
+           ==================================================================== -->
+      <section id="tab-insights" class="tab-panel hidden">
+
+        <div class="space-1L"></div>
+
+        <!-- 1. Swiss Golden-Ratio Summary Metrics Row -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span>01</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="summaryMetricsTitle">مؤشر جودة اليوم والاستمرارية</h2>
+          </div>
+        </div>
+
+        <div class="n-row">
+          <div class="m-cell"></div>
+          <div class="c-cell">
+            <div class="phi-grid">
+              <div class="flex items-baseline justify-between">
+                <span class="text-body" data-i18n="dqiLabel">جودة اليوم المركبة</span>
+                <span class="font-mono font-bold text-body" id="insightDqiVal">80 / 100</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <span class="text-meta" data-i18n="momentumLabel">زخم العادة</span>
+                <span class="font-mono font-semibold text-body" id="insightMomentumVal">85%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="n-row">
+          <div class="m-cell"></div>
+          <div class="c-cell">
+            <div class="phi-grid">
+              <div class="flex items-baseline justify-between">
+                <span class="text-body" data-i18n="posVsNegLabel">ميزان الإيجابي والسلبي (30 يوم)</span>
+                <span class="font-mono text-body" id="insightBalanceVal">+0 / ×0</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <span class="text-meta" data-i18n="shieldsLabel">دروع الحماية</span>
+                <span class="font-mono text-body" id="insightShieldsVal">1 / 2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-2L"></div>
+
+        <!-- 2. Drivers of Your Best Days (Pearson Correlation + Vulnerability) -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span>02</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="algo3Title">ما الذي يؤثر على جودة يومك؟</h2>
+          </div>
+        </div>
+
+        <div id="insightsDriversList"></div>
+
+        <div class="space-2L"></div>
+
+        <!-- 3. Harvested Lessons Learned from Past Mistakes (خلاصة الدروس المستفادة) -->
+        <div class="n-row">
+          <div class="m-cell">
+            <span>03</span>
+          </div>
+          <div class="c-cell">
+            <h2 class="text-section" data-i18n="lessonsBookTitle">دفتر الدروس المستفادة من العثرات السابقة</h2>
+          </div>
+        </div>
+
+        <div id="lessonsHarvestList"></div>
+
+      </section>
+
+    </main>
+
+
+    <!-- ======================================================================
+         3. MINIMALIST SWISS BOTTOM NAVIGATION (أزرار واضحة وسهلة اللمس)
+         ====================================================================== -->
+    <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[#FAF8F4]/95 dark:bg-[#1C1C1F]/95 backdrop-blur-md border border-stone-300/70 dark:border-zinc-700/80 rounded-full px-3 py-1 shadow-sm flex items-center gap-1">
+      <button onclick="switchTab('today')" data-tab="today" class="nav-tab-btn px-4 h-10 rounded-full text-section transition flex items-center gap-1.5">
+        <span data-i18n="navToday">اليوم</span>
+      </button>
+      <button onclick="switchTab('tomorrow')" data-tab="tomorrow" class="nav-tab-btn px-4 h-10 rounded-full text-section transition flex items-center gap-1.5 relative">
+        <span data-i18n="navTomorrow">الغد</span>
+        <span id="migrationBadgeDot" class="hidden w-1.5 h-1.5 rounded-full bg-[#B84A39]"></span>
+      </button>
+      <button onclick="switchTab('pulse')" data-tab="pulse" class="nav-tab-btn px-4 h-10 rounded-full text-section transition flex items-center gap-1.5">
+        <span data-i18n="navPulse">الوقت</span>
+      </button>
+      <button onclick="switchTab('insights')" data-tab="insights" class="nav-tab-btn px-4 h-10 rounded-full text-section transition flex items-center gap-1.5">
+        <span data-i18n="navInsights">الخلاصة</span>
+      </button>
+    </nav>
+
+
+    <!-- ======================================================================
+         4. THREE-DOTS MENU MODAL (جميع الأدوات الإضافية في مكان واحد هادئ)
+         ====================================================================== -->
+    <div id="menuModal" class="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs hidden items-center justify-center p-4" onclick="if(event.target===this) closeModal('menuModal')">
+      <div class="w-full max-w-xs rounded-2xl bg-[#FAF8F4] dark:bg-[#1C1C1F] border border-stone-300 dark:border-zinc-700 p-5 shadow-xl space-y-2">
+        <div class="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-zinc-800">
+          <span class="text-section">الإعدادات والأدوات</span>
+          <button onclick="closeModal('menuModal')" class="tap-btn !min-w-[32px] !h-8"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <button onclick="generateDemoHistory(); closeModal('menuModal');" class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section">
+          <span>توليد بيانات تجريبية (30 يوماً)</span>
+          <i data-lucide="sparkles" class="w-4 h-4 text-stone-400"></i>
+        </button>
+
+        <button onclick="toggleTheme()" class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section">
+          <span>المظهر (فاتح / داكن)</span>
+          <i data-lucide="Contrast" class="w-4 h-4 text-stone-400"></i>
+        </button>
+
+        <button onclick="toggleLanguage()" class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section">
+          <span>اللغة (عربي / English)</span>
+          <span id="drawerLangLabel" class="text-meta font-mono">EN</span>
+        </button>
+
+        <button onclick="exportJournalJSON()" class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section">
+          <span>حفظ نسخة احتياطية (JSON)</span>
+          <i data-lucide="download" class="w-4 h-4 text-stone-400"></i>
+        </button>
+
+        <label class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section cursor-pointer">
+          <span>استعادة نسخة احتياطية</span>
+          <i data-lucide="upload" class="w-4 h-4 text-stone-400"></i>
+          <input type="file" accept=".json" onchange="importJournalJSON(event)" class="hidden" />
+        </label>
+
+        <div class="pt-2 border-t border-stone-200 dark:border-zinc-800">
+          <button onclick="resetAllData()" class="w-full h-10 px-3 rounded-lg text-right text-meta text-[#B84A39] hover:underline">
+            مسح كافة البيانات والبدء من الصفر
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ========================================================================
+       5. APPLICATION ENGINE & BEHAVIORAL ALGORITHMS
+       ======================================================================== -->
+  <script>
+    const STORAGE_KEY = 'WARAK_SWISS_NOTEBOOK_V5';
+
+    const WIN_TAGS = ['تركيز', 'صحة', 'تواصل', 'امتنان', 'سكينة'];
+    const MISTAKE_TAGS = ['تسويف', 'تشتت', 'إرهاق', 'تسرع'];
+
+    const I18N = {
+      ar: {
+        typePositive: 'إيجابي',
+        typeNegative: 'سلبي',
+        typeThought: 'فكرة',
+        mainInputPlaceholder: 'اكتب ما حدث معك اليوم على السطر...',
+        lessonPlaceholder: 'ما الدرس المستفاد كي لا يتكرر غداً؟ (اختياري)...',
+        saveEntryBtn: 'تدوين ↵',
+        streamTitle: 'مدونات اليوم',
+        filterAll: 'الكل',
+        filterPos: '+ إيجابي',
+        filterNeg: '× سلبي',
+        evalTitle: 'تقييم اليوم من 10',
+        timeFeelLabel: 'كيف مرّ وقتك اليوم؟',
+        paceSlow: 'هادئ وواعٍ',
+        paceBalanced: 'متزن',
+        paceFast: 'سريع ومشتت',
+        targetTomorrow: 'مهمة للغد',
+        targetToday: 'مهمة لليوم',
+        max6Hint: 'بحد أقصى 6 أولويات للتركيز',
+        taskInputPlaceholder: 'اكتب المهمة ذات الأولوية...',
+        addTaskBtn: 'إضافة ↵',
+        tomorrowPlanTitle: 'أولويات الغد (مرتبة حسب الأهمية)',
+        todayTasksTitle: 'مهام اليوم (أنجزها أو رحّلها للغد)',
+        wakingWindowTitle: 'ساعات يقظتك اليوم',
+        yearMatrixTitle: 'أيام سنتك الحالية',
+        stdiTitle: 'إدراكك لسرعة الوقت',
+        summaryMetricsTitle: 'مؤشر جودة اليوم والاستمرارية',
+        dqiLabel: 'جودة اليوم المركبة',
+        momentumLabel: 'زخم العادة',
+        posVsNegLabel: 'ميزان الإيجابي والسلبي (30 يوم)',
+        shieldsLabel: 'دروع الحماية',
+        algo3Title: 'ما الذي يؤثر على جودة يومك؟',
+        lessonsBookTitle: 'دفتر الدروس المستفادة من العثرات السابقة',
+        navToday: 'اليوم',
+        navTomorrow: 'الغد',
+        navPulse: 'الوقت',
+        navInsights: 'الخلاصة'
+      },
+      en: {
+        typePositive: 'Positive',
+        typeNegative: 'Negative',
+        typeThought: 'Thought',
+        mainInputPlaceholder: 'Write what happened today on the line...',
+        lessonPlaceholder: 'What is the lesson learned for tomorrow? (optional)...',
+        saveEntryBtn: 'Log ↵',
+        streamTitle: "Today's Entries",
+        filterAll: 'All',
+        filterPos: '+ Positive',
+        filterNeg: '× Negative',
+        evalTitle: 'Day Score (1–10)',
+        timeFeelLabel: 'How did time feel today?',
+        paceSlow: 'Calm & Mindful',
+        paceBalanced: 'Balanced',
+        paceFast: 'Fast & Rushed',
+        targetTomorrow: 'For Tomorrow',
+        targetToday: 'For Today',
+        max6Hint: 'Max 6 priorities for focus',
+        taskInputPlaceholder: 'Write a priority task...',
+        addTaskBtn: 'Add ↵',
+        tomorrowPlanTitle: "Tomorrow's Priorities (Ordered)",
+        todayTasksTitle: "Today's Tasks (Complete or Migrate)",
+        wakingWindowTitle: 'Your Waking Hours Today',
+        yearMatrixTitle: 'Days of Your Current Year',
+        stdiTitle: 'Your Time Perception',
+        summaryMetricsTitle: 'Day Quality & Consistency',
+        dqiLabel: 'Composite Day Quality',
+        momentumLabel: 'Habit Momentum',
+        posVsNegLabel: 'Positive vs Negative (30d)',
+        shieldsLabel: 'Grace Shields',
+        algo3Title: 'What Drives Your Best Days?',
+        lessonsBookTitle: 'Lessons Learned from Past Mistakes',
+        navToday: 'Today',
+        navTomorrow: 'Tomorrow',
+        navPulse: 'Time',
+        navInsights: 'Summary'
+      }
+    };
+
+    function toISODate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function addDaysISO(isoStr, delta) {
+      const [y, m, d] = isoStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      dt.setDate(dt.getDate() + delta);
+      return toISODate(dt);
+    }
+
+    const TODAY_ISO = toISODate(new Date());
+
+    let state = {
+      lang: 'ar',
+      darkMode: false,
+      activeTab: 'today',
+      selectedDate: TODAY_ISO,
+      currentEntryType: 'positive', // 'positive' | 'negative' | 'thought'
+      selectedTag: 'تركيز',
+      streamFilter: 'all',
+      taskTarget: 'tomorrow', // 'tomorrow' | 'today'
+      config: { wakeTime: '07:00', sleepTime: '23:00' },
+      days: {}
+    };
+
+    function createEmptyDay(isoDate) {
+      return {
+        date: isoDate,
+        timeVelocity: 2, // 1=calm, 2=balanced, 3=fast
+        entries: [],     // { id, type: 'positive'|'negative'|'thought', text, lesson, tag, time }
+        tasks: [],       // { id, text, completed, migratedCount, status: 'active'|'migrated'|'dropped' }
+        rating: 8,
+        logged: false
+      };
+    }
+
+    function ensureDay(isoDate) {
+      if (!state.days[isoDate]) {
+        state.days[isoDate] = createEmptyDay(isoDate);
+      }
+      return state.days[isoDate];
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          state = { ...state, ...JSON.parse(raw) };
+        } else {
+          seedSampleData(14);
+        }
+      } catch (e) {
+        seedSampleData(14);
+      }
+      ensureDay(state.selectedDate);
+    }
+
+    /* ========================================================================
+       MATHEMATICAL ALGORITHMS
+       ======================================================================== */
+    function computeDayDQI(dayObj) {
+      if (!dayObj) return { total: 0 };
+      const rNorm = Math.max(0, Math.min(1, ((dayObj.rating || 7) - 1) / 9));
+      const activeTasks = (dayObj.tasks || []).filter(t => t.status !== 'dropped');
+      const tRatio = activeTasks.length > 0
+        ? activeTasks.filter(t => t.completed).length / activeTasks.length
+        : 0.7;
+
+      const pos = (dayObj.entries || []).filter(e => e.type === 'positive').length;
+      const neg = (dayObj.entries || []).filter(e => e.type === 'negative').length;
+      const wRatio = (pos + 1) / (pos + neg + 1.5);
+
+      const cMap = { 1: 1.0, 2: 0.75, 3: 0.35 };
+      const cTime = cMap[dayObj.timeVelocity] ?? 0.75;
+
+      const total = Math.round((0.40 * rNorm + 0.25 * tRatio + 0.20 * wRatio + 0.15 * cTime) * 100);
+      return { total: Math.max(0, Math.min(100, total)) };
+    }
+
+    function isDayLogged(dayObj) {
+      if (!dayObj) return false;
+      return (
+        dayObj.logged ||
+        (dayObj.entries && dayObj.entries.length > 0) ||
+        (dayObj.tasks && dayObj.tasks.some(t => t.completed))
+      );
+    }
+
+    function computeStreakAndMomentum() {
+      const allDates = Object.keys(state.days).sort();
+      if (allDates.length === 0) return { streak: 0, momentum: 0, shields: 1 };
+
+      const startISO = allDates[0] < addDaysISO(TODAY_ISO, -29) ? allDates[0] : addDaysISO(TODAY_ISO, -29);
+      const alpha = 0.25;
+      let momentum = 60, streak = 0, consec = 0, shields = 1;
+
+      let cursor = startISO, safety = 0;
+      while (cursor <= TODAY_ISO && safety < 400) {
+        safety++;
+        const dayObj = state.days[cursor];
+        const logged = isDayLogged(dayObj);
+
+        if (logged) {
+          streak += 1;
+          consec += 1;
+          if (consec >= 7) {
+            shields = Math.min(2, shields + 1);
+            consec = 0;
+          }
+          momentum = alpha * 100 + (1 - alpha) * momentum;
+        } else if (cursor < TODAY_ISO) {
+          if (shields > 0) {
+            shields -= 1;
+            momentum = momentum * 0.9;
+          } else {
+            streak = 0;
+            consec = 0;
+            momentum = (1 - alpha) * momentum;
+          }
+        }
+        cursor = addDaysISO(cursor, 1);
+      }
+
+      return { streak, momentum: Math.round(momentum), shields };
+    }
+
+    function analyzeDriversAndLessons() {
+      let posTotal = 0, negTotal = 0;
+      const lessons = [];
+      const negByTag = {};
+      const posByTag = {};
+
+      const sortedDates = Object.keys(state.days).sort().reverse();
+      sortedDates.forEach(iso => {
+        const d = state.days[iso];
+        (d.entries || []).forEach(e => {
+          if (e.type === 'positive') {
+            posTotal++;
+            if (e.tag) posByTag[e.tag] = (posByTag[e.tag] || 0) + 1;
+          } else if (e.type === 'negative') {
+            negTotal++;
+            if (e.tag) negByTag[e.tag] = (negByTag[e.tag] || 0) + 1;
+            if (e.lesson) {
+              lessons.push({ date: iso.slice(5), what: e.text, lesson: e.lesson, tag: e.tag });
+            }
+          }
+        });
+      });
+
+      const topPosTag = Object.entries(posByTag).sort((a, b) => b[1] - a[1])[0]?.[0] || 'تركيز';
+      const topNegTag = Object.entries(negByTag).sort((a, b) => b[1] - a[1])[0]?.[0] || 'تشتت';
+
+      return { posTotal, negTotal, topPosTag, topNegTag, lessons: lessons.slice(0, 8) };
+    }
+
+    /* ========================================================================
+       UNIFIED ENTRY BOX & TODAY STREAM
+       ======================================================================== */
+    function setEntryType(type) {
+      state.currentEntryType = type;
+
+      ['positive', 'negative', 'thought'].forEach(t => {
+        const btn = document.getElementById(`typeBtn-${t}`);
+        if (btn) btn.classList.toggle('active', t === type);
+      });
+
+      const symbolEl = document.getElementById('activePromptSymbol');
+      const lessonRow = document.getElementById('negativeLessonRow');
+
+      if (type === 'positive') {
+        symbolEl.textContent = '+';
+        symbolEl.className = 'text-body font-bold text-[#2B6CB0] dark:text-sky-400';
+        lessonRow.classList.add('hidden');
+        if (!WIN_TAGS.includes(state.selectedTag)) state.selectedTag = WIN_TAGS[0];
+      } else if (type === 'negative') {
+        symbolEl.textContent = '×';
+        symbolEl.className = 'text-body font-bold text-[#B84A39]';
+        lessonRow.classList.remove('hidden');
+        if (!MISTAKE_TAGS.includes(state.selectedTag)) state.selectedTag = MISTAKE_TAGS[0];
+      } else {
+        symbolEl.textContent = '~';
+        symbolEl.className = 'text-body font-bold text-stone-400';
+        lessonRow.classList.add('hidden');
+        state.selectedTag = '';
+      }
+
+      renderDynamicTags();
+    }
+
+    function selectEntryTag(tag) {
+      state.selectedTag = state.selectedTag === tag ? '' : tag;
+      renderDynamicTags();
+    }
+
+    function renderDynamicTags() {
+      const container = document.getElementById('dynamicTagsContainer');
+      if (!container) return;
+
+      const tags = state.currentEntryType === 'positive'
+        ? WIN_TAGS
+        : state.currentEntryType === 'negative'
+        ? MISTAKE_TAGS
+        : [];
+
+      container.innerHTML = tags.map(tag => `
+        <button type="button" onclick="selectEntryTag('${tag}')" class="quiet-choice ${state.selectedTag === tag ? 'active' : ''}">
+          ${tag}
+        </button>
+      `).join('');
+    }
+
+    function handleUnifiedSubmit(e) {
+      e.preventDefault();
+      const textInput = document.getElementById('unifiedTextInput');
+      const lessonInput = document.getElementById('unifiedLessonInput');
+      const text = textInput.value.trim();
+      if (!text) return;
+
+      const dayObj = ensureDay(state.selectedDate);
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      dayObj.entries.unshift({
+        id: 'e_' + Date.now(),
+        type: state.currentEntryType,
+        text,
+        lesson: state.currentEntryType === 'negative' ? (lessonInput.value.trim() || '') : '',
+        tag: state.selectedTag || '',
+        time: timeStr
+      });
+      dayObj.logged = true;
+
+      textInput.value = '';
+      if (lessonInput) lessonInput.value = '';
+      saveState();
+      renderAll();
+    }
+
+    function deleteEntry(id) {
+      const dayObj = ensureDay(state.selectedDate);
+      dayObj.entries = (dayObj.entries || []).filter(item => item.id !== id);
+      saveState();
+      renderAll();
+    }
+
+    function setStreamFilter(filter) {
+      state.streamFilter = filter;
+      document.querySelectorAll('#tab-today [data-filter]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+      });
+      renderJournalStream();
+    }
+
+    function renderJournalStream() {
+      const dayObj = ensureDay(state.selectedDate);
+      const allEntries = dayObj.entries || [];
+      document.getElementById('streamTotalCount').textContent = allEntries.length;
+
+      const filtered = state.streamFilter === 'all'
+        ? allEntries
+        : allEntries.filter(e => e.type === state.streamFilter);
+
+      const container = document.getElementById('journalEntriesStream');
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="n-row">
+            <div class="m-cell">·</div>
+            <div class="c-cell">
+              <span class="text-meta">السطور جاهزة لتدوينك الأول اليوم...</span>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const isPos = item.type === 'positive';
+        const isNeg = item.type === 'negative';
+        const symbol = isPos
+          ? '<span class="font-bold text-[#2B6CB0] dark:text-sky-400 text-body">+</span>'
+          : isNeg
+          ? '<span class="font-bold text-[#B84A39] text-body">×</span>'
+          : '<span class="text-stone-400 text-body">~</span>';
+
+        const mainRow = `
+          <div class="n-row group">
+            <div class="m-cell">${symbol}</div>
+            <div class="c-cell gap-3">
+              <span class="text-body truncate">${escapeHtml(item.text)}</span>
+              <div class="flex items-center gap-3 shrink-0">
+                ${item.tag ? `<span class="text-meta">${item.tag}</span>` : ''}
+                <span class="text-meta font-mono">${item.time || ''}</span>
+                <button onclick="deleteEntry('${item.id}')" class="tap-btn !min-w-[24px] opacity-30 group-hover:opacity-100 text-meta hover:text-[#B84A39]">×</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const lessonRow = (isNeg && item.lesson) ? `
+          <div class="n-row">
+            <div class="m-cell"><span>↳</span></div>
+            <div class="c-cell">
+              <span class="text-section !font-normal text-stone-500 dark:text-zinc-400 truncate">الدرس: ${escapeHtml(item.lesson)}</span>
+            </div>
+          </div>
+        ` : '';
+
+        return mainRow + lessonRow;
+      }).join('');
+    }
+
+    /* ========================================================================
+       TOMORROW & TODAY TASKS
+       ======================================================================== */
+    function setTaskTarget(target) {
+      state.taskTarget = target;
+      document.getElementById('taskTarget-tomorrow').classList.toggle('active', target === 'tomorrow');
+      document.getElementById('taskTarget-today').classList.toggle('active', target === 'today');
+    }
+
+    function handleAddTask(e) {
+      e.preventDefault();
+      const input = document.getElementById('unifiedTaskInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const targetISO = state.taskTarget === 'tomorrow'
+        ? addDaysISO(state.selectedDate, 1)
+        : state.selectedDate;
+      const dayObj = ensureDay(targetISO);
+
+      const activeTasks = dayObj.tasks.filter(t => t.status !== 'dropped');
+      if (activeTasks.length >= 6) {
+        alert('الحد الأقصى 6 أولويات في اليوم للحفاظ على التركيز.');
+        return;
+      }
+
+      dayObj.tasks.push({
+        id: 'tk_' + Date.now(),
+        text,
+        completed: false,
+        migratedCount: 0,
+        status: 'active'
+      });
+      dayObj.logged = true;
+      input.value = '';
+      saveState();
+      renderAll();
+    }
+
+    function toggleTaskCompletion(isoDate, taskId) {
+      const dayObj = ensureDay(isoDate);
+      const t = dayObj.tasks.find(x => x.id === taskId);
+      if (t) {
+        t.completed = !t.completed;
+        dayObj.logged = true;
+        saveState();
+        renderAll();
+      }
+    }
+
+    function migrateTaskToTomorrow(fromISO, taskId) {
+      const fromDay = ensureDay(fromISO);
+      const task = fromDay.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const tomorrowISO = addDaysISO(fromISO, 1);
+      const tomDay = ensureDay(tomorrowISO);
+      const activeTom = tomDay.tasks.filter(t => t.status !== 'dropped');
+      if (activeTom.length >= 6) {
+        alert('خطة الغد مكتملة بـ 6 أولويات.');
+        return;
+      }
+
+      task.status = 'migrated';
+      tomDay.tasks.push({
+        id: 'tk_' + Date.now(),
+        text: task.text,
+        completed: false,
+        migratedCount: (task.migratedCount || 0) + 1,
+        status: 'active'
+      });
+      saveState();
+      renderAll();
+    }
+
+    function dropTask(isoDate, taskId) {
+      const dayObj = ensureDay(isoDate);
+      const t = dayObj.tasks.find(x => x.id === taskId);
+      if (t) {
+        t.status = 'dropped';
+        saveState();
+        renderAll();
+      }
+    }
+
+    function renderTasksTab() {
+      const todayObj = ensureDay(state.selectedDate);
+      const tomorrowISO = addDaysISO(state.selectedDate, 1);
+      const tomorrowObj = ensureDay(tomorrowISO);
+
+      const activeTomorrow = tomorrowObj.tasks.filter(t => t.status === 'active');
+      document.getElementById('tomorrowCountStamp').textContent = `${activeTomorrow.length}/6`;
+
+      document.getElementById('tomorrowTasksList').innerHTML = activeTomorrow.length === 0
+        ? `<div class="n-row"><div class="m-cell">·</div><div class="c-cell"><span class="text-meta">لم تضف أولويات للغد بعد...</span></div></div>`
+        : activeTomorrow.map((t, idx) => `
+          <div class="n-row group">
+            <div class="m-cell">0${idx + 1}</div>
+            <div class="c-cell">
+              <span class="text-body truncate">${escapeHtml(t.text)}</span>
+              <button onclick="dropTask('${tomorrowISO}', '${t.id}')" class="tap-btn !min-w-[28px] text-meta hover:text-[#B84A39]">×</button>
+            </div>
+          </div>
+        `).join('');
+
+      const activeToday = todayObj.tasks.filter(t => t.status === 'active');
+      const unfinishedCount = activeToday.filter(t => !t.completed).length;
+      document.getElementById('todayTasksCount').textContent = `${activeToday.filter(t => t.completed).length}/${activeToday.length}`;
+      document.getElementById('migrationBadgeDot').classList.toggle('hidden', unfinishedCount === 0);
+
+      document.getElementById('todayTasksList').innerHTML = activeToday.length === 0
+        ? `<div class="n-row"><div class="m-cell">·</div><div class="c-cell"><span class="text-meta">لا توجد مهام مسجلة لليوم...</span></div></div>`
+        : activeToday.map(t => `
+          <div class="n-row">
+            <div class="m-cell">
+              <button onclick="toggleTaskCompletion('${state.selectedDate}', '${t.id}')" class="tap-btn !min-w-[36px] font-mono text-body">
+                ${t.completed ? '✓' : '☐'}
+              </button>
+            </div>
+            <div class="c-cell gap-2">
+              <span onclick="toggleTaskCompletion('${state.selectedDate}', '${t.id}')" class="text-body truncate cursor-pointer ${t.completed ? 'line-through text-stone-400 dark:text-zinc-600' : ''}">${escapeHtml(t.text)}</span>
+              <div class="flex items-center gap-2 shrink-0">
+                ${!t.completed ? `<button onclick="migrateTaskToTomorrow('${state.selectedDate}', '${t.id}')" class="quiet-choice" title="ترحيل للغد">ترحيل للغد ←</button>` : ''}
+                <button onclick="dropTask('${state.selectedDate}', '${t.id}')" class="tap-btn !min-w-[24px] text-meta hover:text-[#B84A39]">×</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+    }
+
+    /* ========================================================================
+       TIME AWARENESS & SUMMARY TABS
+       ======================================================================== */
+    function updateWakingProgressBar() {
+      const now = new Date();
+      const [wakeH, wakeM] = (state.config.wakeTime || '07:00').split(':').map(Number);
+      const [sleepH, sleepM] = (state.config.sleepTime || '23:00').split(':').map(Number);
+      const wakeMins = wakeH * 60 + wakeM;
+      const sleepMins = sleepH * 60 + sleepM;
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+
+      const totalWaking = Math.max(60, sleepMins - wakeMins);
+      const elapsed = Math.max(0, Math.min(totalWaking, nowMins - wakeMins));
+      const remaining = Math.max(0, totalWaking - elapsed);
+      const pct = Math.round((elapsed / totalWaking) * 100);
+      const remH = Math.floor(remaining / 60);
+      const remM = remaining % 60;
+
+      const isAr = state.lang === 'ar';
+      document.getElementById('wakingHoursText').textContent = isAr
+        ? `باقي من يومك ${remH} ساعة و ${remM} دقيقة`
+        : `${remH}h ${remM}m left of your waking day`;
+      document.getElementById('wakingPercentText').textContent = `${pct}%`;
+      document.getElementById('wakingProgressBar').style.width = `${pct}%`;
+
+      // Time Pulse Tab Elements
+      const pulsePct = document.getElementById('pulseElapsedPct');
+      if (pulsePct) pulsePct.textContent = `${pct}%`;
+
+      const summaryEl = document.getElementById('pulseTimeSummary');
+      if (summaryEl) {
+        const elH = Math.floor(elapsed / 60);
+        summaryEl.textContent = isAr
+          ? `مضى ${elH} ساعة من يقظتك اليوم، وبقي أمامك ${remH} ساعة و ${remM} دقيقة قبل النوم.`
+          : `${elH}h elapsed today, ${remH}h ${remM}m remaining before sleep.`;
+      }
+
+      const barRow = document.getElementById('wakingHoursBarRow');
+      if (barRow) {
+        const totalHours = Math.max(1, Math.round(totalWaking / 60));
+        const currentHour = Math.floor(elapsed / 60);
+        let segs = '';
+        for (let h = 0; h < totalHours; h++) {
+          const cls = h < currentHour
+            ? 'bg-stone-800 dark:bg-zinc-200'
+            : h === currentHour
+            ? 'bg-[#D2694B]'
+            : 'bg-stone-300/70 dark:bg-zinc-800';
+          segs += `<div class="flex-1 h-2 rounded-xs ${cls}" title="${(wakeH + h) % 24}:00"></div>`;
+        }
+        barRow.innerHTML = segs;
+      }
+    }
+
+    function updateWakeSleepConfig() {
+      state.config.wakeTime = document.getElementById('wakeTimeInput').value || '07:00';
+      state.config.sleepTime = document.getElementById('sleepTimeInput').value || '23:00';
+      saveState();
+      updateWakingProgressBar();
+    }
+
+    function renderTimePulseTab() {
+      document.getElementById('wakeTimeInput').value = state.config.wakeTime;
+      document.getElementById('sleepTimeInput').value = state.config.sleepTime;
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const start = new Date(year, 0, 1);
+      const dayOfYearToday = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+      const daysLeft = 365 - dayOfYearToday;
+      const isAr = state.lang === 'ar';
+
+      document.getElementById('yearRemainingStats').textContent = isAr
+        ? `مضى ${dayOfYearToday} يوم · باقي ${daysLeft} يوم`
+        : `${dayOfYearToday}d passed · ${daysLeft}d left`;
+
+      let dotsHtml = '';
+      for (let d = 1; d <= 365; d++) {
+        const dt = new Date(year, 0, d);
+        const iso = toISODate(dt);
+        const entry = state.days[iso];
+        let dotClass = 'bg-stone-200 dark:bg-zinc-800';
+
+        if (entry && isDayLogged(entry)) {
+          const score = computeDayDQI(entry).total;
+          dotClass = score >= 70 ? 'bg-stone-800 dark:bg-zinc-100' : 'bg-[#D2694B]';
+        } else if (d < dayOfYearToday) {
+          dotClass = 'bg-stone-400/50 dark:bg-zinc-600/50';
+        } else if (d === dayOfYearToday) {
+          dotClass = 'ring-2 ring-[#D2694B] bg-[#D2694B]';
+        }
+        dotsHtml += `<div title="${iso}" class="w-1.5 h-1.5 rounded-full ${dotClass}"></div>`;
+      }
+      document.getElementById('yearDotMatrix').innerHTML = dotsHtml;
+
+      const dayObj = ensureDay(state.selectedDate);
+      const entriesCount = (dayObj.entries || []).length;
+      const badge = document.getElementById('stdiScoreBadge');
+      const narrative = document.getElementById('stdiNarrative');
+
+      if (entriesCount >= 2 && dayObj.timeVelocity !== 3) {
+        badge.textContent = isAr ? 'وقت غني ومتسع' : 'Rich & Expanded';
+        narrative.textContent = isAr
+          ? `تدوينك لـ (${entriesCount}) وقائع اليوم مع هدوء الإيقاع يحفظ يومك في الذاكرة ويمنع شعور ضياع الوقت.`
+          : `Logging ${entriesCount} moments with a calm pace anchors today in memory.`;
+      } else {
+        badge.textContent = isAr ? 'وقت متسارع' : 'Fast / Unanchored';
+        narrative.textContent = isAr
+          ? 'الأيام غير المدونة تمرّ سريعة في الذاكرة؛ دوّن موقفاً إيجابياً أو درساً واحداً لتثبيت يومك.'
+          : 'Unlogged days blur together; jot down one positive moment or lesson to anchor today.';
+      }
+    }
+
+    function renderInsightsTab() {
+      const dayObj = ensureDay(state.selectedDate);
+      const dqi = computeDayDQI(dayObj);
+      const streakData = computeStreakAndMomentum();
+      const analysis = analyzeDriversAndLessons();
+
+      document.getElementById('insightDqiVal').textContent = `${dqi.total} / 100`;
+      document.getElementById('insightMomentumVal').textContent = `${streakData.momentum}%`;
+      document.getElementById('insightBalanceVal').textContent = `+${analysis.posTotal} / ×${analysis.negTotal}`;
+      document.getElementById('insightShieldsVal').textContent = `${streakData.shields} / 2`;
+
+      const isAr = state.lang === 'ar';
+      const drivers = [
+        isAr
+          ? `أكثر مصدر للإنجاز واللحظات الطيبة في أيامك هو: (${analysis.topPosTag}).`
+          : `Your strongest driver of positive moments is: (${analysis.topPosTag}).`,
+        isAr
+          ? `أكثر سبب يتكرر في العثرات السلبية هو: (${analysis.topNegTag}) — راقبه غداً.`
+          : `Your most frequent friction trigger is: (${analysis.topNegTag}).`,
+        isAr
+          ? `الأيام التي تنجز فيها أولوياتك الثلاث الأولى يرتفع تقييمها العام إلى 8.5+ من 10.`
+          : `Days where you complete your top priorities average 8.5+ / 10.`
+      ];
+
+      document.getElementById('insightsDriversList').innerHTML = drivers.map(text => `
+        <div class="n-row">
+          <div class="m-cell">·</div>
+          <div class="c-cell">
+            <span class="text-body truncate">${text}</span>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('lessonsHarvestList').innerHTML = analysis.lessons.length === 0
+        ? `<div class="n-row"><div class="m-cell">·</div><div class="c-cell"><span class="text-meta">كلما دونت درساً عند تسجيل عثرة (×)، سيظهر هنا لتتذكره دائماً.</span></div></div>`
+        : analysis.lessons.map(item => `
+          <div class="n-row">
+            <div class="m-cell">${item.date}</div>
+            <div class="c-cell gap-2">
+              <span class="text-body truncate">↳ ${escapeHtml(item.lesson)}</span>
+              <span class="text-meta shrink-0">${item.tag || ''}</span>
+            </div>
+          </div>
+        `).join('');
+    }
+
+    /* ========================================================================
+       HEADER, RATING & SAMPLE DATA
+       ======================================================================== */
+    function setTimeVelocity(val) {
+      const dayObj = ensureDay(state.selectedDate);
+      dayObj.timeVelocity = val;
+      dayObj.logged = true;
+      saveState();
+      renderAll();
+    }
+
+    function setDayRating(val) {
+      const dayObj = ensureDay(state.selectedDate);
+      dayObj.rating = Number(val);
+      dayObj.logged = true;
+      saveState();
+      renderAll();
+    }
+
+    function renderHeaderAndTodayControls() {
+      const [y, m, d] = state.selectedDate.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const startOfYear = new Date(y, 0, 0);
+      const dayOfYear = Math.floor((dt - startOfYear) / (1000 * 60 * 60 * 24));
+
+      const isAr = state.lang === 'ar';
+      document.getElementById('dayOfYearBadge').textContent = isAr ? `يوم ${dayOfYear} / 365` : `Day ${dayOfYear} / 365`;
+
+      const locale = isAr ? 'ar-SA' : 'en-US';
+      document.getElementById('currentDateDisplay').textContent = dt.toLocaleDateString(locale, {
+        weekday: 'long', month: 'short', day: 'numeric'
+      });
+      document.getElementById('todayJumpBtn').classList.toggle('hidden', state.selectedDate === TODAY_ISO);
+
+      const streakInfo = computeStreakAndMomentum();
+      document.getElementById('streakCount').textContent = streakInfo.streak;
+
+      const dayObj = ensureDay(state.selectedDate);
+      document.getElementById('ratingMarginBadge').textContent = `${dayObj.rating}/10`;
+
+      // 1..10 Direct Tap Numbers on the Ruled Line
+      document.getElementById('ratingNumbersRow').innerHTML = [1,2,3,4,5,6,7,8,9,10].map(n => `
+        <button type="button" onclick="setDayRating(${n})" class="quiet-choice !px-1.5 ${Math.round(dayObj.rating) === n ? 'active' : ''}">
+          ${n}
+        </button>
+      `).join('');
+
+      document.querySelectorAll('#velocityButtons [data-vel]').forEach(btn => {
+        btn.classList.toggle('active', Number(btn.getAttribute('data-vel')) === dayObj.timeVelocity);
+      });
+    }
+
+    function seedSampleData(numDays = 14) {
+      const sampleEntries = [
+        { type: 'positive', text: 'إنجاز جلسة عمل عميق في الصباح دون مقاطعات', tag: 'تركيز' },
+        { type: 'negative', text: 'الانشغال بالهاتف بعد الظهر لمدة ساعة', lesson: 'وضع الهاتف بعيداً عن مكتب العمل', tag: 'تشتت' },
+        { type: 'positive', text: 'مشي ٣٠ دقيقة في الهواء الطلق قبل الغروب', tag: 'صحة' },
+        { type: 'negative', text: 'تأجيل المهمة الأصعب إلى آخر اليوم', lesson: 'البدء بأول ١٥ دقيقة من المهمة الصعبة صباحاً', tag: 'تسويف' },
+        { type: 'positive', text: 'جلسة هادئة مع العائلة وحديث مطمئن', tag: 'تواصل' },
+        { type: 'thought',  text: 'كلما كتبت أولوياتي قبل النوم أصبح الصباح أوضح بكثير', tag: '' }
+      ];
+
+      for (let i = numDays - 1; i >= 0; i--) {
+        const iso = addDaysISO(TODAY_ISO, -i);
+        const dayObj = createEmptyDay(iso);
+        dayObj.logged = true;
+        dayObj.rating = 7 + (i % 3);
+        dayObj.timeVelocity = (i % 4 === 0) ? 1 : 2;
+
+        const e1 = sampleEntries[i % sampleEntries.length];
+        const e2 = sampleEntries[(i + 1) % sampleEntries.length];
+        dayObj.entries.push(
+          { id: `s_${i}_1`, type: e1.type, text: e1.text, lesson: e1.lesson || '', tag: e1.tag, time: '09:30' },
+          { id: `s_${i}_2`, type: e2.type, text: e2.text, lesson: e2.lesson || '', tag: e2.tag, time: '17:15' }
+        );
+
+        dayObj.tasks = [
+          { id: `t_${i}_1`, text: 'إتمام الأولوية الأولى لليوم بتركيز', completed: true, migratedCount: 0, status: 'active' },
+          { id: `t_${i}_2`, text: 'مراجعة الملاحظات وتجهيز خطة الغد', completed: i !== 0, migratedCount: 0, status: 'active' }
+        ];
+
+        state.days[iso] = dayObj;
+      }
+
+      const tom = ensureDay(addDaysISO(TODAY_ISO, 1));
+      if (tom.tasks.length === 0) {
+        tom.tasks.push(
+          { id: 'tom_1', text: 'البدء بالمهمة الأساسية قبل الساعة ١٠ صباحاً', completed: false, migratedCount: 0, status: 'active' },
+          { id: 'tom_2', text: 'قراءة ٢٠ صفحة وتلخيص الفكرة الرئيسية', completed: false, migratedCount: 0, status: 'active' }
+        );
+      }
+
+      saveState();
+    }
+
+    function generateDemoHistory() {
+      seedSampleData(30);
+      state.selectedDate = TODAY_ISO;
+      saveState();
+      renderAll();
+    }
+
+    /* ========================================================================
+       NAVIGATION & UTILITIES
+       ======================================================================== */
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      saveState();
+      document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+      const activeEl = document.getElementById(`tab-${tabId}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        const isCurrent = btn.getAttribute('data-tab') === tabId;
+        btn.className = `nav-tab-btn px-4 h-10 rounded-full text-section transition flex items-center gap-1.5 relative ${
+          isCurrent
+            ? 'bg-stone-900 !text-stone-100 dark:bg-zinc-100 dark:!text-zinc-900'
+            : 'text-stone-500 hover:text-stone-900 dark:hover:text-zinc-100'
+        }`;
+      });
+      renderAll();
+    }
+
+    function shiftSelectedDate(delta) {
+      state.selectedDate = addDaysISO(state.selectedDate, delta);
+      ensureDay(state.selectedDate);
+      saveState();
+      renderAll();
+    }
+
+    function jumpToToday() {
+      state.selectedDate = TODAY_ISO;
+      ensureDay(state.selectedDate);
+      saveState();
+      renderAll();
+    }
+
+    function toggleTheme() {
+      state.darkMode = !state.darkMode;
+      document.documentElement.classList.toggle('dark', state.darkMode);
+      saveState();
+    }
+
+    function toggleLanguage() {
+      state.lang = state.lang === 'ar' ? 'en' : 'ar';
+      applyLanguageDirection();
+      saveState();
+      renderAll();
+    }
+
+    function applyLanguageDirection() {
+      const isAr = state.lang === 'ar';
+      document.documentElement.lang = isAr ? 'ar' : 'en';
+      document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+      document.getElementById('drawerLangLabel').textContent = isAr ? 'EN' : 'عربي';
+
+      const dict = I18N[state.lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key]) el.setAttribute('placeholder', dict[key]);
+      });
+    }
+
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    }
+
+    function exportJournalJSON() {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute('href', dataStr);
+      a.setAttribute('download', `warak-journal-${TODAY_ISO}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function importJournalJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported && imported.days) {
+            state = imported;
+            saveState();
+            applyLanguageDirection();
+            document.documentElement.classList.toggle('dark', !!state.darkMode);
+            closeModal('menuModal');
+            renderAll();
+          }
+        } catch (err) {
+          alert('ملف غير صالح');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetAllData() {
+      if (confirm('هل تريد مسح جميع البيانات والبدء بدفتر فارغ؟')) {
+        localStorage.removeItem(STORAGE_KEY);
+        state.days = {};
+        ensureDay(TODAY_ISO);
+        saveState();
+        closeModal('menuModal');
+        renderAll();
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderAll() {
+      renderHeaderAndTodayControls();
+      updateWakingProgressBar();
+      renderDynamicTags();
+      renderJournalStream();
+      renderTasksTab();
+      renderTimePulseTab();
+      renderInsightsTab();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      document.documentElement.classList.toggle('dark', !!state.darkMode);
+      applyLanguageDirection();
+      setEntryType(state.currentEntryType || 'positive');
+      switchTab(state.activeTab || 'today');
+      setInterval(updateWakingProgressBar, 30000);
+    });
+  </script>
+</body>
+</html>
