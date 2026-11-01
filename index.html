@@ -1039,14 +1039,32 @@
           <span class="text-meta">Export</span>
         </button>
 
-        <label class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section cursor-pointer">
+        <!-- Reliable Mobile & Desktop JSON Import Button -->
+        <button type="button" onclick="triggerJSONImport()" class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section">
           <span class="flex items-center gap-2">
             <i data-lucide="upload" class="w-4 h-4 text-stone-500"></i>
-            <span>استعادة نسخة احتياطية</span>
+            <span>استعادة نسخة احتياطية (ملف JSON)</span>
           </span>
-          <span class="text-meta">Import</span>
-          <input type="file" accept=".json" onchange="importJournalJSON(event)" class="hidden" />
-        </label>
+          <span class="text-meta font-mono">Import</span>
+        </button>
+
+        <!-- Direct Paste JSON Option -->
+        <button type="button" onclick="pasteJSONFromClipboard()" class="w-full h-11 px-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-section">
+          <span class="flex items-center gap-2">
+            <i data-lucide="clipboard-paste" class="w-4 h-4 text-stone-500"></i>
+            <span>لصق بيانات JSON من الحافظة</span>
+          </span>
+          <span class="text-meta font-mono">Paste</span>
+        </button>
+
+        <!-- Hidden File Input that NEVER fails on iOS/Android -->
+        <input
+          type="file"
+          id="jsonFileInput"
+          accept=".json,application/json,text/json,text/plain"
+          onchange="importJournalJSON(event)"
+          style="position: fixed; top: -9999px; left: -9999px; opacity: 0; pointer-events: none;"
+        />
 
         <div class="pt-2 border-t border-stone-200 dark:border-zinc-800">
           <button onclick="resetAllData()" class="w-full h-10 px-3 rounded-lg text-right text-meta text-[#B84A39] hover:underline">
@@ -1221,15 +1239,58 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('appToast');
+      const msgEl = document.getElementById('toastMessage');
+      const iconEl = document.getElementById('toastIcon');
+      if (!toast || !msgEl) return;
+
+      msgEl.textContent = message;
+      if (iconEl) iconEl.textContent = isError ? '×' : '✓';
+      toast.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+      }, 3500);
+    }
+
     function loadState() {
+      const LEGACY_STORAGE_KEYS = [
+        STORAGE_KEY,
+        'WARAK_SWISS_NOTEBOOK_V6',
+        'WARAK_SWISS_NOTEBOOK_V5',
+        'WARAK_SWISS_NOTEBOOK_V4',
+        'WARAK_SWISS_NOTEBOOK_V3',
+        'WARAK_SWISS_NOTEBOOK_V2',
+        'WARAK_NOTEBOOK_STATE_V1'
+      ];
+
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        let raw = null;
+        for (const k of LEGACY_STORAGE_KEYS) {
+          const val = localStorage.getItem(k);
+          if (val) {
+            raw = val;
+            break;
+          }
+        }
+
         if (raw) {
-          state = { ...state, ...JSON.parse(raw) };
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            state = { ...state, ...parsed };
+            if (parsed.days && typeof parsed.days === 'object') {
+              state.days = parsed.days;
+            }
+          }
         } else {
           seedSampleData(30);
         }
       } catch (e) {
+        console.error('Error loading state:', e);
         seedSampleData(30);
       }
       ensureDay(state.selectedDate);
@@ -2347,35 +2408,170 @@
     }
 
     function exportJournalJSON() {
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state, null, 2));
-      const a = document.createElement('a');
-      a.setAttribute('href', dataStr);
-      a.setAttribute('download', `warak-journal-${TODAY_ISO}.json`);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const isAr = state.lang === 'ar';
+      try {
+        const jsonStr = JSON.stringify(state, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `warak-journal-${TODAY_ISO}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 200);
+        showToast(isAr ? 'تم تنزيل النسخة الاحتياطية (JSON) بنجاح' : 'Backup JSON exported successfully');
+      } catch (err) {
+        showToast(isAr ? 'فشل تصدير الملف' : 'Export failed', true);
+      }
+    }
+
+    function triggerJSONImport() {
+      const input = document.getElementById('jsonFileInput');
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+    }
+
+    function processImportedJSON(jsonString) {
+      const isAr = state.lang === 'ar';
+      try {
+        let parsed = JSON.parse(jsonString);
+
+        if (typeof parsed === 'string') {
+          parsed = JSON.parse(parsed);
+        }
+
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('Invalid JSON structure');
+        }
+
+        let extractedDays = {};
+
+        // Case 1: Standard format with .days object
+        if (parsed.days && typeof parsed.days === 'object') {
+          extractedDays = parsed.days;
+        }
+        // Case 2: Object with ISO dates directly as keys (YYYY-MM-DD)
+        else if (typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).some(k => k.split('-').length === 3)) {
+          for (const [k, v] of Object.entries(parsed)) {
+            if (k.split('-').length === 3 && typeof v === 'object') {
+              extractedDays[k] = v;
+            }
+          }
+        }
+        // Case 3: Array of day objects [ { date: "YYYY-MM-DD", ... } ]
+        else if (Array.isArray(parsed)) {
+          parsed.forEach(item => {
+            if (item && item.date && typeof item.date === 'string') {
+              extractedDays[item.date] = item;
+            } else if (item && item.text) {
+              const d = item.date || TODAY_ISO;
+              if (!extractedDays[d]) extractedDays[d] = createEmptyDay(d);
+              extractedDays[d].entries.push(item);
+              extractedDays[d].logged = true;
+            }
+          });
+        }
+        // Case 4: Storage key wrapper or nested state
+        else {
+          for (const k of Object.keys(parsed)) {
+            const val = parsed[k];
+            if (val && typeof val === 'object' && val.days) {
+              extractedDays = val.days;
+              break;
+            } else if (typeof val === 'string' && val.includes('"days"')) {
+              try {
+                const sub = JSON.parse(val);
+                if (sub && sub.days) {
+                  extractedDays = sub.days;
+                  break;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+
+        const daysCount = Object.keys(extractedDays).length;
+        if (daysCount === 0) {
+          showToast(isAr ? 'الملف لا يحتوي على بيانات أيام صالحة' : 'No valid journal days found in file', true);
+          return false;
+        }
+
+        // Safely merge configurations without destroying defaults
+        if (parsed.config && typeof parsed.config === 'object') {
+          state.config = { ...state.config, ...parsed.config };
+        }
+        if (parsed.lang === 'ar' || parsed.lang === 'en') {
+          state.lang = parsed.lang;
+        }
+        if (parsed.darkMode !== undefined) {
+          state.darkMode = !!parsed.darkMode;
+        }
+        if (parsed.calendarMode) {
+          state.calendarMode = parsed.calendarMode;
+        }
+
+        // Merge extracted days into current state
+        state.days = { ...state.days, ...extractedDays };
+
+        // Ensure active date is valid
+        ensureDay(state.selectedDate || TODAY_ISO);
+
+        // Persist and update UI
+        saveState();
+        applyLanguageDirection();
+        document.documentElement.classList.toggle('dark', !!state.darkMode);
+        updateCalendarModeUI();
+        closeModal('menuModal');
+        renderAll();
+
+        showToast(isAr ? `تمت استعادة البيانات بنجاح (${daysCount} يوماً)` : `Successfully restored (${daysCount} days)`);
+        return true;
+      } catch (err) {
+        console.error('Import parse error:', err);
+        showToast(isAr ? 'ملف JSON غير صالح أو تالف' : 'Invalid or corrupted JSON file', true);
+        return false;
+      }
     }
 
     function importJournalJSON(event) {
-      const file = event.target.files[0];
+      const file = event.target.files && event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function(e) {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (imported && imported.days) {
-            state = imported;
-            saveState();
-            applyLanguageDirection();
-            document.documentElement.classList.toggle('dark', !!state.darkMode);
-            closeModal('menuModal');
-            renderAll();
-          }
-        } catch (err) {
-          alert('ملف غير صالح');
-        }
+        processImportedJSON(e.target.result);
+      };
+      reader.onerror = function() {
+        showToast(state.lang === 'ar' ? 'تعذر قراءة الملف من الجهاز' : 'Failed to read file from device', true);
       };
       reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    async function pasteJSONFromClipboard() {
+      const isAr = state.lang === 'ar';
+      try {
+        let text = '';
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          text = await navigator.clipboard.readText();
+        }
+        if (!text) {
+          text = prompt(isAr ? 'الصق نص الـ JSON الخاص بالنسخة الاحتياطية هنا:' : 'Paste your backup JSON text here:');
+        }
+        if (text && text.trim()) {
+          processImportedJSON(text.trim());
+        }
+      } catch (err) {
+        const text = prompt(isAr ? 'الصق نص الـ JSON الخاص بالنسخة الاحتياطية هنا:' : 'Paste your backup JSON text here:');
+        if (text && text.trim()) {
+          processImportedJSON(text.trim());
+        }
+      }
     }
 
     function resetAllData() {
@@ -2417,5 +2613,12 @@
       setInterval(updateWakingProgressBar, 30000);
     });
   </script>
+
+  <!-- Floating Feedback Toast Notification -->
+  <div id="appToast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-3 px-4 py-2.5 rounded-full bg-stone-900 text-stone-100 dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono shadow-2xl border border-white/10 dark:border-black/10 flex items-center gap-2">
+    <span id="toastIcon" class="font-bold">✓</span>
+    <span id="toastMessage"></span>
+  </div>
+
 </body>
 </html>
